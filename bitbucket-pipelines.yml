@@ -1,0 +1,33 @@
+image: node:20.11.1
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Build
+          caches: 
+            - node
+          script:
+            - npm install
+            - npm run build
+          artifacts:
+            - dist/**
+      - step:
+          name: Deploy
+          deployment: production
+          script:
+            - pipe: atlassian/scp-deploy:0.3.3
+              variables:
+                USER: $USER
+                SERVER: $SERVER
+                REMOTE_PATH: '~/ticker-press-backend'
+                LOCAL_PATH: 'dist/'
+            - pipe: atlassian/ssh-run:0.3.0
+              variables:
+                SSH_USER: $USER
+                SERVER: $SERVER
+                COMMAND: >
+                  cd ~/ticker-press-backend/;
+                  mv data/** .;
+                  npm install;
+                  npm run migrate;
+                  pm2 restart tickerpress-api;
